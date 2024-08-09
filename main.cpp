@@ -976,7 +976,8 @@ int main() {
         static bool replacenew = false;
         WINDOW_START("Instruments")
                 for (const auto &[id, instrument]: state.instruments) {
-                    if (ImGuiKnobs::Knob(("##Volume"+instrument.name).c_str(), &state.realInstruments[id]->volume, 0.0f, 1.0f, 0.01f, "%.1f", ImGuiKnobVariant_WiperOnly)) {
+                    if (ImGuiKnobs::Knob(("##Volume"+instrument.name).c_str(), &state.realInstruments[id]->volume, 0.0f, 1.0f,
+                                         0.01f, "%.1f", ImGuiKnobVariant_WiperOnly, 50, ImGuiKnobFlags_DragHorizontal | ImGuiKnobFlags_NoTitle | ImGuiKnobFlags_ValueTooltip, 1000)) {
                         // volume changed
                     }
                     ImGui::SameLine();
