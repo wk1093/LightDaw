@@ -14,10 +14,11 @@ As of right now it is VERY early in development, and is not yet usable. However,
  - Uses a custom file format for saving projects
  - Only uses a small amount of external libraries (check the `CMakeLists.txt` for more info)
 
-## WIP
+## TODO
 
  - Plugin API
  - Stereo audio support (currently only mono)
+ - global BPM (ignore internal MIDI bpm)
  - Piano roll
  - Mixer (channel strip with effects, volume, pan, etc.)
  - Audio Recording

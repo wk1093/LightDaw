@@ -4,6 +4,7 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_internal.h>
+#include <imgui-knobs.h>
 #include <imgui_stdlib.h>
 #include <vector>
 #include <iostream>
@@ -267,7 +268,7 @@ struct LightDawState {
     }
 
     void createRealInstruments() {
-        for (const auto &[id, instrument]: instruments) {
+        for (auto &[id, instrument]: instruments) {
             if (realInstruments.find(id) == realInstruments.end()) {
                 if (instrument.flags == LdifFile::FLAGS_SYNTH) { // 0x25c2230 sqr  0x25cc9a0 sin
                     realInstruments[id] = new SynthInstrument(createSynth(instrument.id.id));
@@ -281,7 +282,17 @@ struct LightDawState {
                         std::cerr << "Error: Failed to create synth" << std::endl;
                         error_queue.emplace_back("Error: Failed to create synth");
                     }
-                    realInstruments[id]->deserializeParams(instrument.instrumentData);
+                    DeserializeResult x = realInstruments[id]->deserializeParams(instrument.instrumentData);
+                    if (x == DeserializeResult::Failure) {
+                        // we assume it's our fault (the data we gave was wrong)
+                        // so we will recreate the synth (to get the default values) and serialize it
+                        // then we will save the new data
+                        std::cerr << "Error: Failed to deserialize synth parameters" << std::endl;
+                        delete realInstruments[id];
+                        realInstruments[id] = new SynthInstrument(createSynth(instrument.id.id));
+                        instrument.instrumentData = realInstruments[id]->serializeParams();
+
+                    }
                 } else {
                     std::cerr << "Error: Instrument is not a synth" << std::endl;
                     error_queue.emplace_back("Error: Instrument is not a synth:\nExternal instruments are not supported in this version!");
@@ -943,8 +954,11 @@ int main() {
         }
 
         for (auto& instr : state.realInstruments) {
-            if (instr.second != nullptr)
+            if (instr.second != nullptr) {
+                instr.second->update(deltaTime, 120); // TODO: get bpm from project
                 instr.second->updateGui();
+            }
+
         } //
 
 
@@ -962,6 +976,10 @@ int main() {
         static bool replacenew = false;
         WINDOW_START("Instruments")
                 for (const auto &[id, instrument]: state.instruments) {
+                    if (ImGuiKnobs::Knob(("##Volume"+instrument.name).c_str(), &state.realInstruments[id]->volume, 0.0f, 1.0f, 0.01f, "%.1f", ImGuiKnobVariant_WiperOnly)) {
+                        // volume changed
+                    }
+                    ImGui::SameLine();
                     if (ImGui::Selectable(instrument.name.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)) {
                         // open the instrument GUI
                         state.realInstruments[id]->toggleGui();

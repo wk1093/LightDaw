@@ -6,6 +6,8 @@
 
 class Instrument {
 public:
+    float volume = 1.0;
+
     virtual AudioBuffer generateSamples(size_t sampleCount, double freq, double vol) = 0;
     virtual AudioBuffer generateSeconds(double seconds, double freq, double vol) { // freq in Hz, vol in [0, 1]
         return generateSamples(static_cast<size_t>(seconds * SAMPLE_RATE), freq, vol);
@@ -56,7 +58,7 @@ public:
             return AudioBuffer(sampleCount);
         }
         synth->frequency = (float)freq;
-        synth->amplitude = (float)vol / 2.0f;
+        synth->amplitude = (float)vol * volume;
         return synth->generateSamples(sampleCount);
     }
 
@@ -104,4 +106,6 @@ public:
         }
         return Failure;
     }
+
+
 };

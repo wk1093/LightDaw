@@ -38,9 +38,16 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
         GIT_TAG v1.90.9-docking
 )
+FetchContent_Declare(
+        imgui_knobs
+        GIT_REPOSITORY https://github.com/altschuler/imgui-knobs.git
+        GIT_TAG main
+)
 FetchContent_GetProperties(imgui)
-if(NOT imgui_POPULATED)
+FetchContent_GetProperties(imgui_knobs)
+if(NOT imgui_POPULATED OR NOT imgui_knobs_POPULATED)
     FetchContent_Populate(imgui)
+    FetchContent_Populate(imgui_knobs)
     add_library(imgui
             ${imgui_SOURCE_DIR}/imgui.cpp
             ${imgui_SOURCE_DIR}/imgui_demo.cpp
@@ -50,26 +57,13 @@ if(NOT imgui_POPULATED)
             ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
             ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
             ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+            ${imgui_knobs_SOURCE_DIR}/imgui-knobs.cpp
             )
-    target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
+    target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp ${imgui_knobs_SOURCE_DIR})
     target_link_libraries(imgui glfw)
 endif()
 
 
-
-#FetchContent_Declare(
-#        openalsoft
-#        GIT_REPOSITORY https://github.com/kcat/openal-soft.git
-#        GIT_TAG makemhr
-#)
-#FetchContent_GetProperties(openalsoft)
-#if(NOT openalsoft_POPULATED)
-#    FetchContent_Populate(openalsoft)
-#    add_subdirectory(${openalsoft_SOURCE_DIR})
-#endif()
-
-# OpenAL is too slow/glitchy for a DAW
-# we will use portaudio instead
 FetchContent_Declare(
         portaudio
         GIT_REPOSITORY https://github.com/PortAudio/portaudio
