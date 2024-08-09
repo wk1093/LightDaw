@@ -1,0 +1,103 @@
+LightDaw
+DAW project file (.ldpa LightDaw Project Archive): A custom archive containing the following:
+ - 'main.ldip' A main project file (.ldip LightDaw Internal Project) containing the projects settings and references to the other files.
+ - midi: (.mid)
+    - A folder containing all the midi files used in the project. Filenames = id. The file name is an id (used internally) and the file contains the important data.
+ - audio: (.wav)
+    - A folder containing all the audio files used in the project. Filenames = id.
+ - pattern: (.ldpf)
+    - A folder containing all the pattern files used in the project. Filenames = id.
+ - instrument: (.ldif)
+    - A folder containing all the instrument files used in the project. Filenames = id.
+ - automation: (.ldac)
+    - A folder containing all the automation files used in the project. Filenames = id.
+
+The Project file has the following structure (in a binary format (todo)):
+
+an "instrument" can be an audio file, a plugin, or an internally defined instrument (part of the DAW).
+A pattern "file" is a file that links a midi file to an instrument. It can do this with multiple instruments/midi files.
+
+file ids are 64-bit unsigned integers (in hex) starting with "ld" followed by the hex digits.
+example file id (128 dec): ld0000000000000080.ext
+
+
+LDIP:
+    - 4 bytes: "LDIP" (0x4C, 0x44, 0x49, 0x50)
+    - 4 bytes: Version number (0x00, 0x00, 0x00, 0x01)
+    - 2 bytes: size of the project name (n)
+    - n bytes: project name (UTF-8)
+    - 2 bytes: size of the project author (n)
+    - n bytes: project author (UTF-8)
+    - 2 bytes: size of the project description (n)
+    - n bytes: project description (UTF-8)
+    - 2 bytes: size of the project version (n)
+    - n bytes: project version (UTF-8)
+    - 8 bytes: timestamp of the project creation (64-bit unsigned integer)
+    - 8 bytes: timestamp of the project last modification (64-bit unsigned integer)
+    - 4 bytes: size of the project settings (n)
+    - n bytes: project settings (todo)
+    - todo rest of the file
+    - todo this will contain the actual song data (what patterns are used in the playlist, and the automation clips)
+
+LDPF:
+    - 4 bytes: "LDPF" (0x4C, 0x44, 0x50, 0x46)
+    - 4 bytes: Version number (0x00, 0x00, 0x00, 0x01)
+    - 2 bytes: size of the pattern name (n)
+    - n bytes: pattern name (UTF-8)
+    - 2 bytes: number of midi-instrument pairs (m)
+    - m * (8 bytes: midi file id (64-bit unsigned integer) + 8 bytes: instrument file id (64-bit unsigned integer))
+
+LDIF: // instrument can be a plugin, audio file, or an internally defined instrument
+    - 4 bytes: "LDIF" (0x4C, 0x44, 0x49, 0x46)
+    - 4 bytes: Version number (0x00, 0x00, 0x00, 0x01)
+    - 2 bytes: size of the instrument name (n)
+    - n bytes: instrument name (UTF-8)
+    - 1 byte: instrument type (0: plugin, 1: audio file, 2: internal)
+    if instrument type == 0: // plugin
+        - 2 bytes: size of the plugin name (n)
+        - n bytes: plugin name (UTF-8)
+        - 2 bytes: size of the plugin settings (n)
+        - n bytes: plugin settings (todo)
+    if instrument type == 1: // audio file
+        - 8 bytes: audio file id (64-bit unsigned integer)
+    if instrument type == 2: // internal
+        - 8 bytes: internal instrument id
+        - 2 bytes: size of the internal instrument settings (n)
+        - n bytes: internal instrument settings (todo)
+
+LDAC: // automation clip will connect to either a built-in parameter or an instrument parameter (can be plugin parameters, audio parameters, or internal instrument parameters
+    - 4 bytes: "LDAC" (0x4C, 0x44, 0x41, 0x43)
+    - 4 bytes: Version number (0x00, 0x00, 0x00, 0x01)
+    - 2 bytes: size of the automation clip name (n)
+    - n bytes: automation clip name (UTF-8)
+    - 1 byte: automation clip type (0: built-in parameter, 1: instrument parameter)
+if automation clip type == 0: // built-in parameter
+        - 8 bytes: built-in parameter id
+    if automation clip type == 1: // instrument parameter
+        - 8 bytes: instrument id
+        - 8 bytes: instrument parameter id
+    - 2 bytes: size of the automation clip settings (n)
+    - n bytes: automation clip settings (todo)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
