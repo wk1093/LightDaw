@@ -37,6 +37,13 @@ public:
     virtual DeserializeResult deserializeParams(const ByteBuffer& data) {
         return Success;
     }
+
+    void playMidi(int note, double sec) {
+        double freq = 440.0 * std::pow(2.0, (note - 69) / 12.0);
+        auto b = generateSeconds(sec, freq, 1.0);
+        playtest(b);
+
+    }
 };
 
 class SynthInstrument : public Instrument {

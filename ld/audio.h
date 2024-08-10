@@ -3,6 +3,9 @@
 #include    <iostream>
 #include "filetools.h"
 #include <portaudio.h>
+#include <vector>
+#include <algorithm>
+
 
 typedef std::vector<float> AudioBuffer;
 
@@ -277,7 +280,7 @@ struct AudioPlayer {
 
     }
 
-    bool isPlaying() const {
+    [[nodiscard]] bool isPlaying() const {
         return Pa_IsStreamActive(stream) == 1;
     }
 
@@ -305,6 +308,17 @@ void initAudio() {
 
 void terminateAudio() {
     Pa_Terminate();
+}
+
+std::vector<AudioPlayer> __audioPlaytestPlayers;
+
+void playtest(const AudioBuffer& buffer) {
+    __audioPlaytestPlayers.erase(std::remove_if(__audioPlaytestPlayers.begin(), __audioPlaytestPlayers.end(), [](const AudioPlayer& player) {
+        return !player.isPlaying();
+    }), __audioPlaytestPlayers.end());
+
+    __audioPlaytestPlayers.emplace_back(buffer);
+    __audioPlaytestPlayers.back().play();
 }
 
 

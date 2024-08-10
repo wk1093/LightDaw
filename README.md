@@ -35,3 +35,4 @@ As of right now it is VERY early in development, and is not yet usable. However,
  - Comments
  - Documentation
  - Testing
+ - Slide notes

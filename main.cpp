@@ -19,6 +19,11 @@
 #include <map>
 #include <unordered_map>
 
+std::string midiNoteName(int note) {
+    static const std::vector<std::string> notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    return notes[note % 12] + std::to_string(note / 12 - 1);
+}
+
 void SetupImGuiStyle1() {
     ImGuiStyle *style = &ImGui::GetStyle();
 
@@ -1157,7 +1162,8 @@ int main() {
                     static float noteHeight = 20.0f;
                     ImGui::SetNextWindowScroll(ImVec2(0, scroll));
                     if (ImGui::BeginChild("LeftNotes", ImVec2(100, 0), ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoScrollbar)) {
-                        for (int i = 0; i < 128; i++) {
+                        for (int ii = 0; ii < 128; ii++) {
+                            int i = 127 - ii;
                             if (i % 12 == 1 || i % 12 == 3 || i % 12 == 6 || i % 12 == 8 || i % 12 == 10) {
                                 ImGui::PushStyleColor(ImGuiCol_Button, blacknote);
                             } else {
@@ -1165,7 +1171,12 @@ int main() {
                             }
                             // we want NO spacing between the buttons
                             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-                            ImGui::Button(std::to_string(i).c_str(), ImVec2(100, noteHeight));
+                            if (ImGui::Button(midiNoteName(i).c_str(), ImVec2(100, noteHeight))) {
+                                // if selectedinstrument is not 0, play this note
+                                if (state.selectedInstrument != 0) {
+                                    state.realInstruments[state.selectedInstrument]->playMidi(i, 1.0f);
+                                }
+                            }
                             ImGui::PopStyleVar();
                             ImGui::PopStyleColor();
 
@@ -1188,7 +1199,7 @@ int main() {
                             ImGui::TableNextRow();
                             for (int j = 0; j < 16; j++) {
                                 ImGui::TableNextColumn();
-                                ImGui::Button(std::to_string(i).c_str(), ImVec2(50, noteHeight));
+                                ImGui::Button("", ImVec2(50, noteHeight));
                             }
                         }
                         ImGui::EndTable();
