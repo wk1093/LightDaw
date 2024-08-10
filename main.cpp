@@ -71,6 +71,72 @@ void SetupImGuiStyle1() {
     style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
 }
 
+void AudioWaveform(ImVec2 size, AudioPlayer *player, double smoothDeltaTime) {
+    ImVec2 position = ImGui::GetCursorScreenPos();
+
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
+    // get theme colors
+    ImGuiStyle *style = &ImGui::GetStyle();
+    ImColor backgroundColor = style->Colors[ImGuiCol_FrameBg];
+    if (ImGui::IsMouseHoveringRect(position, ImVec2(position.x + size.x, position.y + size.y))) {
+        backgroundColor = style->Colors[ImGuiCol_FrameBgHovered];
+    }
+    ImColor waveColor = style->Colors[ImGuiCol_Text];
+
+
+    drawList->AddRectFilled(position, ImVec2(position.x + size.x, position.y + size.y), backgroundColor);
+
+    // as a test, we will just get the audio data and display as text
+    AudioBuffer audiodata;
+    if (player != nullptr) {
+        // we will get all the samples from the last dt
+        // we will display a waveform of the samples
+        size_t numSamples = SAMPLE_RATE * smoothDeltaTime;
+//            size_t numSamples = SAMPLE_RATE / 60;
+
+        const AudioBuffer& samples = player->getBuffer();
+        static const size_t limit = 100; // if we go over this, do every other sample (or every 3, or whatever is needed to stay under)
+        // this is basically the quality of the waveform, lower is low quality, but better performance, higher makes it super smooth but slow
+        int step = 1;
+        if (numSamples > limit) {
+            step = numSamples / limit;
+        }
+        for (int i = 0; i < numSamples; i += step) {
+            float dat = 0.0f;
+            if (i + player->getPosition() < samples.size()) {
+                dat = samples[i+player->getPosition()];
+            }
+            audiodata.push_back(dat);
+        }
+    } else {
+        audiodata = AudioBuffer(100);
+    }
+
+    // normalize the audio data by finding the farthest from 0 (max(abs(max), abs(min))) and dividing by that
+    float max = 0.0f;
+    for (float f: audiodata) {
+        if (std::abs(f) > max) {
+            max = std::abs(f);
+        }
+    }
+    if (max == 0.0f) {
+        max = 1.0f;
+    }
+    if (max < 0.5f) {
+        max = 0.5f;
+    }
+    for (float &f: audiodata) {
+        f /= max;
+    }
+
+    for (int i = 0; i < audiodata.size() - 1; i++) {
+        float x1 = position.x + i * size.x / audiodata.size();
+        float y1 = position.y + size.y / 2 - audiodata[i] * size.y / 2;
+        float x2 = position.x + (i + 1) * size.x / audiodata.size();
+        float y2 = position.y + size.y / 2 - audiodata[i+1] * size.y / 2;
+        drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), waveColor);
+    }
+}
 
 struct MidiToBuffer {
     Instrument *synth;
@@ -153,6 +219,7 @@ struct LightDawState {
     std::vector<LdpfFile> patterns{};
     std::unordered_map<uint64_t, smf::MidiFile> midis{};
     size_t selectedPattern = 0;
+    size_t selectedInstrument = 0;
 
     LdipFile project{};
 
@@ -771,10 +838,6 @@ int main() {
             state.patternMode = !state.patternMode;
         }
 
-
-
-
-
         // pattern selection and editor menu
         // it shows the current selected pattern name, when you click it it shows a list of patterns, if you click one, it selects it
         // if you right click, you can edit it (change name, delete) or create a new pattern
@@ -853,70 +916,8 @@ int main() {
         // a basic waveform display
         // we want it to take up the whole vertical space, and 100 pixels horizontally
         ImGui::SameLine(0, 0);
-        ImVec2 position = ImVec2(ImGui::GetCursorScreenPos().x, menuBarPos.y + menuBarSize.y);
-        size = ImVec2(180, menuBarSize.y * 3);
-
-        ImDrawList *drawList = ImGui::GetWindowDrawList();
-        // get theme colors
-        backgroundColor = style->Colors[ImGuiCol_FrameBg];
-        if (ImGui::IsMouseHoveringRect(position, ImVec2(position.x + size.x, position.y + size.y))) {
-            backgroundColor = style->Colors[ImGuiCol_FrameBgHovered];
-        }
-        ImColor waveColor = style->Colors[ImGuiCol_Text];
-
-
-        drawList->AddRectFilled(position, ImVec2(position.x + size.x, position.y + size.y), backgroundColor);
-
-        // as a test, we will just get the audio data and display as text
-        AudioBuffer audiodata;
-        if (state.player != nullptr) {
-            // we will get all the samples from the last dt
-            // we will display a waveform of the samples
-            size_t numSamples = SAMPLE_RATE * smoothDeltaTime;
-//            size_t numSamples = SAMPLE_RATE / 60;
-
-            const AudioBuffer& samples = state.player->getBuffer();
-            static const size_t limit = 100; // if we go over this, do every other sample (or every 3, or whatever is needed to stay under)
-            // this is basically the quality of the waveform, lower is low quality, but better performance, higher makes it super smooth but slow
-            int step = 1;
-            if (numSamples > limit) {
-                step = numSamples / limit;
-            }
-            for (int i = 0; i < numSamples; i += step) {
-                float dat = 0.0f;
-                if (i + state.player->getPosition() < samples.size()) {
-                    dat = samples[i+state.player->getPosition()];
-                }
-                audiodata.push_back(dat);
-            }
-        } else {
-            audiodata = AudioBuffer(100);
-        }
-
-        // normalize the audio data by finding the farthest from 0 (max(abs(max), abs(min))) and dividing by that
-        float max = 0.0f;
-        for (float f: audiodata) {
-            if (std::abs(f) > max) {
-                max = std::abs(f);
-            }
-        }
-        if (max == 0.0f) {
-            max = 1.0f;
-        }
-        if (max < 0.5f) {
-            max = 0.5f;
-        }
-        for (float &f: audiodata) {
-            f /= max;
-        }
-
-        for (int i = 0; i < audiodata.size() - 1; i++) {
-            float x1 = position.x + i * size.x / audiodata.size();
-            float y1 = position.y + size.y / 2 - audiodata[i] * size.y / 2;
-            float x2 = position.x + (i + 1) * size.x / audiodata.size();
-            float y2 = position.y + size.y / 2 - audiodata[i+1] * size.y / 2;
-            drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), waveColor);
-        }
+        ImGui::SetCursorScreenPos(ImVec2(ImGui::GetCursorScreenPos().x, menuBarPos.y + menuBarSize.y));
+        AudioWaveform(ImVec2(180, menuBarSize.y * 3), state.player, smoothDeltaTime);
 
 
 
@@ -963,7 +964,7 @@ int main() {
 
 
 
-#define WINDOW_START(name) if (first) names[n] = name; if (open[n]) { if (ImGui::Begin(name, (bool*)&open[n], ImGuiWindowFlags_NoCollapse)) {
+#define WINDOW_START(name, ...) if (first) names[n] = name; if (open[n]) { if (ImGui::Begin(name, (bool*)&open[n], ImGuiWindowFlags_NoCollapse __VA_ARGS__)) {
 #define WINDOW_END() } ImGui::End(); } n++;
 
         static bool renameinstrument = false;
@@ -977,7 +978,7 @@ int main() {
         WINDOW_START("Instruments")
                 for (const auto &[id, instrument]: state.instruments) {
                     if (ImGuiKnobs::Knob(("##Volume"+instrument.name).c_str(), &state.realInstruments[id]->volume, 0.0f, 1.0f,
-                                         0.01f, "%.1f", ImGuiKnobVariant_WiperOnly, 50, ImGuiKnobFlags_DragHorizontal | ImGuiKnobFlags_NoTitle | ImGuiKnobFlags_ValueTooltip, 1000)) {
+                                         0.01f, "Volume: %.2f", ImGuiKnobVariant_Wiper, 25, ImGuiKnobFlags_DragHorizontal | ImGuiKnobFlags_NoTitle | ImGuiKnobFlags_NoInput | ImGuiKnobFlags_ValueTooltip, 1000)) {
                         // volume changed
                     }
                     ImGui::SameLine();
@@ -1119,9 +1120,90 @@ int main() {
         }
 
 
-        WINDOW_START("Piano")
-                ImGui::Text("The piano will be here");
+        WINDOW_START("Piano", | ImGuiWindowFlags_MenuBar)
+
+                if (ImGui::BeginMenuBar()) {
+                    if (ImGui::BeginMenu("Edit")) {
+                        if (ImGui::MenuItem("TODO")) {
+                            // TODO
+                        }
+                        ImGui::EndMenu();
+                    }
+                    std::string selectedInstrument = "Instruments";
+                    if (state.selectedInstrument != 0) {
+                        selectedInstrument = state.instruments[state.selectedInstrument].name;
+                    }
+                    if (ImGui::BeginMenu(selectedInstrument.c_str())) {
+                        for (const auto &[id, instrument]: state.instruments) {
+                            if (ImGui::MenuItem(instrument.name.c_str(), nullptr, state.selectedInstrument == id)) {
+                                state.selectedInstrument = id;
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenuBar();
+
+                    // piano roll
+                    // we will have a piano roll on the left, and the notes in the middle
+                    // the piano roll will be a grid of keys, with the keys being the notes
+                    // the notes will be displayed as rectangles
+
+                    ImVec4 whitenote = ImColor(255, 255, 255);
+                    ImVec4 blacknote = ImColor(0, 0, 0);
+                    ImVec4 background = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+                    ImVec4 line = ImGui::GetStyleColorVec4(ImGuiCol_Border);
+
+                    static float scroll = 0.0f;
+                    static float noteHeight = 20.0f;
+                    ImGui::SetNextWindowScroll(ImVec2(0, scroll));
+                    if (ImGui::BeginChild("LeftNotes", ImVec2(100, 0), ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoScrollbar)) {
+                        for (int i = 0; i < 128; i++) {
+                            if (i % 12 == 1 || i % 12 == 3 || i % 12 == 6 || i % 12 == 8 || i % 12 == 10) {
+                                ImGui::PushStyleColor(ImGuiCol_Button, blacknote);
+                            } else {
+                                ImGui::PushStyleColor(ImGuiCol_Button, whitenote);
+                            }
+                            // we want NO spacing between the buttons
+                            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+                            ImGui::Button(std::to_string(i).c_str(), ImVec2(100, noteHeight));
+                            ImGui::PopStyleVar();
+                            ImGui::PopStyleColor();
+
+
+                        }
+                        ImGui::EndChild();
+                    }
+                    ImGui::SameLine(0, 0);
+                    if (ImGui::BeginChild("MiddleGrid")) {
+                        // make a grid for length is just window length
+                        // height is 128 * noteHeight
+                        // we will have a grid of 128 * 16
+                        // each cell will be a note
+                        // we want each
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+                        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0, 0));
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+                        ImGui::BeginTable("Notes", 16, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit);
+                        for (int i = 0; i < 128; i++) {
+                            ImGui::TableNextRow();
+                            for (int j = 0; j < 16; j++) {
+                                ImGui::TableNextColumn();
+                                ImGui::Button(std::to_string(i).c_str(), ImVec2(50, noteHeight));
+                            }
+                        }
+                        ImGui::EndTable();
+                        ImGui::PopStyleVar(3);
+                        scroll = ImGui::GetScrollY();
+                        ImGui::EndChild();
+
+                    }
+
+
+
+                }
         WINDOW_END()
+
+        ImGui::ShowDemoWindow();
 
         if (!state.error_queue.empty()) {
             ImGui::OpenPopup("Error");
