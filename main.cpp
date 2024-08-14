@@ -530,9 +530,11 @@ int main() {
 //    ByteBuffer buffer2 = af1.toBytes();
 //    writeFile("test.ldpa", buffer2);
 
-    ArchiveFile af = ArchiveFile::fromFile("test.ldpa");
+//    ArchiveFile af = ArchiveFile::fromFile("test.ldpa");
 
-    LightDawState state = LightDawState::fromArchive(af, "test.ldpa");
+//    LightDawState state = LightDawState::fromArchive(af, "test.ldpa");
+
+    LightDawState state = LightDawState::newProj();
 
 
     // Setup ImGui
